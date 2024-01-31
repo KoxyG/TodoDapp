@@ -101,25 +101,38 @@ function App() {
   const UpdateTodo = async (index) => {
     try {
       console.log("index: ", index);
-
+  
       const signer = await getSigner();
       const todoContract = getTodoContractInstance(signer);
-
-      const txn = await todoContract.updateTodoStatus(index);
-      
-     
-      
-      console.log("txn: ", txn);
+  
       setToggling(index);
-      
+      // Update the todo status in the contract
+      const txn = await todoContract.updateTodoStatus(index);
+  
+      // Wait for the transaction to be mined
       await txn.wait();
-     
-
+  
+      // Fetch the updated todo after the transaction is mined
+      const newTodo = await todoContract.showTodo(index);
+  
+      // Update the UI state with the updated todo
+      setTodos((prevTodos) => {
+        const updatedTodos = [...prevTodos];
+        updatedTodos[index] = newTodo;
+        return updatedTodos;
+      });
+  
+      
       setToggling(null);
+  
+      // Log the updated todo if needed
+      console.log("Updated Todo:", newTodo);
+  
     } catch (error) {
       console.error(error);
     }
   };
+  
 
   const DeleteTodo = async (index) => {
     try {
@@ -168,9 +181,10 @@ function App() {
         try {
           const todoContract = getTodoContractInstance(provider);
           const contractTodos = await todoContract.showTodos();
-          const filteredTodos = contractTodos.filter(todo => todo.title && todo.description);
+          // const newContractTodo = await contractTodos.filter(todo => todo.title !== "" && todo.description !== "" && todo.isCompleted);
 
-          setTodos(filteredTodos);
+          setTodos(contractTodos);
+          // setTodos(newContractTodo);
         } catch (error) {
           console.error(error);
         }
@@ -278,7 +292,7 @@ function App() {
                       <div className="card-body">
                         <h4>{todo.title}</h4>
                         <p>{todo.description}</p>
-                        {todo.isCompleted ? (
+                        {todo.isCompleted == true ? (
                           <span className="badge bg-success">Done</span>
                         ) : (
                           <span className="badge bg-warning">Undone</span>
