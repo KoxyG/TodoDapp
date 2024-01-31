@@ -17,7 +17,7 @@ function App() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [todos, setTodos] = useState(null);
-  const [updateTodo, setUpdateTodo] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const [toggling, setToggling] = useState(null);
 
   // Helper function to fetch a Provider instance from Metamask
@@ -112,10 +112,10 @@ function App() {
       // Wait for the transaction to be mined
       await txn.wait();
   
-      // Fetch the updated todo after the transaction is mined
+      
       const newTodo = await todoContract.showTodo(index);
   
-      // Update the UI state with the updated todo
+      
       setTodos((prevTodos) => {
         const updatedTodos = [...prevTodos];
         updatedTodos[index] = newTodo;
@@ -141,13 +141,17 @@ function App() {
       const signer = await getSigner();
       const todoContract = getTodoContractInstance(signer);
 
+
       const txn = await todoContract.deleteTodo(index);
+      setDeleting(index);
+      await txn.wait();
       
       setTodos((prevTodos) => {
         const updatedTodos = [...prevTodos];
         updatedTodos.splice(index, 1);
         return updatedTodos;
       });
+      setDeleting(null);
       
       console.log("txn: ", txn);
       
@@ -180,26 +184,34 @@ function App() {
       if (account && provider) {
         try {
           const todoContract = getTodoContractInstance(provider);
+  
+          // Fetch all todos from the contract
           const contractTodos = await todoContract.showTodos();
-          // const newContractTodo = await contractTodos.filter(todo => todo.title !== "" && todo.description !== "" && todo.isCompleted);
-
-          setTodos(contractTodos);
-          // setTodos(newContractTodo);
+  
+          // Filter out todos with an empty title or empty description
+          const filteredTodos = contractTodos.filter(todo => 
+            todo.title.trim() !== "" && 
+            todo.description.trim() !== ""
+          );
+  
+          // Update state with the filtered todos
+          setTodos(filteredTodos);
         } catch (error) {
           console.error(error);
         }
       }
     };
-
+  
     fetchTodos();
   }, [account, provider]);
+  
 
   return (
     <div className="">
       <div className="container">
         <nav className="navbar navbar-expand-lg navbar-light bg-primary">
           <a className="navbar-brand text-white" href="!#">
-            WID Todo Application
+            Todo dApp
           </a>
           <button
             className="navbar-toggler"
@@ -292,7 +304,7 @@ function App() {
                       <div className="card-body">
                         <h4>{todo.title}</h4>
                         <p>{todo.description}</p>
-                        {todo.isCompleted == true ? (
+                        {todo.isCompleted === true ? (
                           <span className="badge bg-success">Done</span>
                         ) : (
                           <span className="badge bg-warning">Undone</span>
@@ -300,7 +312,20 @@ function App() {
                         <hr />
                         <hr />
 
-                        <button onClick={() => DeleteTodo(index)} className="btn btn-secondary">Delete Todo</button>
+                        {deleting === index  ? (
+                          <button className="btn btn-secondary" disabled>
+                            Deleting
+                          </button>
+                        ) : (
+                          <button
+                          onClick={() => DeleteTodo(index)}
+                            className="btn btn-secondary"
+                          >
+                           Delete Todo
+                          </button>
+                        )}
+
+                       
 
                         {toggling === index  ? (
                           <button className="btn btn-secondary" disabled>
